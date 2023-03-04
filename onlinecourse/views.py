@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 # <HINT> Import any new Models here
-from .models import Course, Enrollment, Submission
+from .models import Course, Enrollment, Submission, Question, Choice
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
@@ -111,30 +111,29 @@ def enroll(request, course_id):
          # Add each selected choice object to the submission object
          # Redirect to show_exam_result with the submission id
 def submit(request, course_id):
-    def submit(request, course_id):
-         # Get user and course object, then get the associated enrollment object created when the user enrolled the course
-         course = get_object_or_404(Course, pk=course_id)
-         user = request.user 
-         is_enrolled = check_if_enrolled(user, course)
-         if user.is_authenticated:
-            if is_enrolled:
-                enrollment = Enrollment.objects.get(user=user, course=course)
-                # Create a submission object referring to the enrollment
-                submission = Submission.objects.create(enrollment=enrollment)
-                # Collect the selected choices from exam form
-                answers = extract_answers(request)
-                submission.choices.add(*answers)         
+    # Get user and course object, then get the associated enrollment object created when the user enrolled the course
+    course = get_object_or_404(Course, pk=course_id)
+    user = request.user 
+    is_enrolled = check_if_enrolled(user, course)
+    if user.is_authenticated:
+        if is_enrolled:
+            enrollment = Enrollment.objects.get(user=user, course=course)
+            # Create a submission object referring to the enrollment
+            submission = Submission.objects.create(enrollment=enrollment)
+            # Collect the selected choices from exam form
+            answers = extract_answers(request)
+            submission.choices.add(*answers)         
             
-                return HttpResponseRedirect(reverse(
+            return HttpResponseRedirect(reverse(
                 viewname='onlinecourse:show_exam_result',
                 args=(course.id, submission.id,)
                 ))
-            else:
-                return HttpResponseRedirect(reverse(
+        else:
+            return HttpResponseRedirect(reverse(
                 viewname='onlinecourse:enroll',
                 args=(course.id,)
                 ))
-         else:
+    else:
 
             # Redirect to show_exam_result with the submission id
             return redirect('onlinecourse:login')
@@ -163,9 +162,9 @@ def show_exam_result(request, course_id, submission_id):
     choices = submission.choices.all()
     total_mark, mark = 0, 0
     for question in course.question_set.all():
-        total_mark += question.mark
+        total_mark += question.question_grade
         if question.is_get_score(choices):
-            mark += question.mark
+            mark += question.question_grade
     
     return render(
         request,
